@@ -2,14 +2,21 @@ package websocket
 
 import (
     "bytes"
-    "github.com/gorilla/websocket"
     "io"
+
+    "github.com/gorilla/websocket"
 )
 
 type Wrapper struct {
     conn       *websocket.Conn
     buf        bytes.Buffer
     readClosed bool
+}
+
+func NewWrapper(conn *websocket.Conn) *Wrapper {
+    return &Wrapper{
+        conn: conn,
+    }
 }
 
 func (w *Wrapper) Read(p []byte) (n int, err error) {
@@ -47,5 +54,12 @@ func (w *Wrapper) Write(p []byte) (n int, err error) {
 }
 
 func (w *Wrapper) Close() error {
+    if err := w.CloseWrite(); err != nil {
+        return err
+    }
     return w.conn.Close()
+}
+
+func (w *Wrapper) CloseWrite() error {
+    return w.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 }
