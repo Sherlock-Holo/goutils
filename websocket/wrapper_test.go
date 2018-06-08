@@ -9,6 +9,7 @@ import (
     "github.com/gorilla/websocket"
     "net/url"
     "time"
+    "io"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -31,7 +32,12 @@ func server(t *testing.T, done <-chan struct{}) {
 
         wrapper := NewWrapper(conn)
 
-        if _, err := wrapper.Write([]byte("holo")); err != nil {
+        /*if _, err := wrapper.Write([]byte("holo")); err != nil {
+            t.Error(err)
+            wrapper.Close()
+            return
+        }*/
+        if _, err := io.WriteString(wrapper, "holo"); err != nil {
             t.Error(err)
             wrapper.Close()
             return
@@ -52,7 +58,7 @@ func server(t *testing.T, done <-chan struct{}) {
 
     http.HandleFunc("/echo", handle)
 
-    go http.ListenAndServe("127.0.0.1:9876", nil)
+    go t.Fatal(http.ListenAndServe("127.0.0.1:9876", nil))
 
     <-done
 }
@@ -67,7 +73,12 @@ func client(t *testing.T, done chan<- struct{}) {
 
     wrapper := NewWrapper(conn)
 
-    if _, err := wrapper.Write([]byte("sherlock")); err != nil {
+    /*if _, err := wrapper.Write([]byte("sherlock")); err != nil {
+        t.Error(err)
+        wrapper.Close()
+        return
+    }*/
+    if _, err := io.WriteString(wrapper, "sherlock"); err != nil {
         t.Error(err)
         wrapper.Close()
         return
