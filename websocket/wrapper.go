@@ -1,16 +1,14 @@
 package websocket
 
 import (
-    "bytes"
     "io"
 
     "github.com/gorilla/websocket"
 )
 
 type Wrapper struct {
-    conn       *websocket.Conn
-    buf        bytes.Buffer
-    readClosed bool
+    r    io.Reader
+    conn *websocket.Conn
 }
 
 func NewWrapper(conn *websocket.Conn) *Wrapper {
@@ -19,38 +17,44 @@ func NewWrapper(conn *websocket.Conn) *Wrapper {
     }
 }
 
-func (w *Wrapper) Read(p []byte) (n int, err error) {
-    if w.buf.Len() > 0 {
-        return w.buf.Read(p)
-    }
-
-    if w.readClosed {
-        return 0, io.EOF
-    }
-
-    _, b, err := w.conn.ReadMessage()
-    if err != nil {
-        if closeError, ok := err.(*websocket.CloseError); ok {
-            if closeError.Code == websocket.CloseNormalClosure {
-                w.readClosed = true
-                return 0, io.EOF
-            }
-        }
-
+func (w *Wrapper) Write(p []byte) (n int, err error) {
+    if err := w.conn.WriteMessage(websocket.BinaryMessage, p); err != nil {
         return 0, err
     }
-
-    w.buf.Write(b)
-    return w.buf.Read(p)
+    return len(p), nil
 }
 
-func (w *Wrapper) Write(p []byte) (n int, err error) {
-    err = w.conn.WriteMessage(websocket.BinaryMessage, p)
-    if err != nil {
-        return 0, err
+func (w *Wrapper) Read(p []byte) (n int, err error) {
+    for {
+        if w.r == nil {
+            // Advance to next message.
+            _, w.r, err = w.conn.NextReader()
+            if err != nil {
+                if closeError, ok := err.(*websocket.CloseError); ok {
+                    // log.Println("ok")
+                    if closeError.Code == websocket.CloseNormalClosure {
+                        // log.Println("nornal close")
+                        return 0, io.EOF
+                    }
+                    // log.Println("not nornal close", err)
+                    return 0, err
+                }
+                return 0, err
+            }
+        }
+        n, err = w.r.Read(p)
+        if err == io.EOF {
+            // At end of message.
+            w.r = nil
+            if n > 0 {
+                return n, nil
+            } else {
+                // No data read, continue to next message.
+                continue
+            }
+        }
+        return n, err
     }
-
-    return len(p), nil
 }
 
 func (w *Wrapper) Close() error {

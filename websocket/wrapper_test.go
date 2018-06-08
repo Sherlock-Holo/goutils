@@ -1,27 +1,29 @@
 package websocket
 
 import (
+    "fmt"
+    "io"
     "io/ioutil"
     "net/http"
-    "testing"
-
-    "fmt"
-    "github.com/gorilla/websocket"
     "net/url"
+    "testing"
     "time"
-    "io"
+
+    "github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{}
 
 func TestWrapper(t *testing.T) {
     done := make(chan struct{})
-    go server(t, done)
-    time.Sleep(time.Second)
-    client(t, done)
+    go func() {
+        time.Sleep(time.Second)
+        client(t, done)
+    }()
+    server(t, done)
 }
 
-func server(t *testing.T, done <-chan struct{}) {
+func server(t *testing.T, done chan struct{}) {
     handle := func(w http.ResponseWriter, r *http.Request) {
         conn, err := upgrader.Upgrade(w, r, nil)
 
@@ -32,11 +34,6 @@ func server(t *testing.T, done <-chan struct{}) {
 
         wrapper := NewWrapper(conn)
 
-        /*if _, err := wrapper.Write([]byte("holo")); err != nil {
-            t.Error(err)
-            wrapper.Close()
-            return
-        }*/
         if _, err := io.WriteString(wrapper, "holo"); err != nil {
             t.Error(err)
             wrapper.Close()
@@ -58,12 +55,16 @@ func server(t *testing.T, done <-chan struct{}) {
 
     http.HandleFunc("/echo", handle)
 
-    go t.Fatal(http.ListenAndServe("127.0.0.1:9876", nil))
+    go func() {
+        t.Fatal(http.ListenAndServe("127.0.0.1:9876", nil))
+    }()
 
     <-done
 }
 
 func client(t *testing.T, done chan<- struct{}) {
+    defer close(done)
+
     u := url.URL{Scheme: "ws", Host: "127.0.0.1:9876", Path: "/echo"}
 
     conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
@@ -73,11 +74,6 @@ func client(t *testing.T, done chan<- struct{}) {
 
     wrapper := NewWrapper(conn)
 
-    /*if _, err := wrapper.Write([]byte("sherlock")); err != nil {
-        t.Error(err)
-        wrapper.Close()
-        return
-    }*/
     if _, err := io.WriteString(wrapper, "sherlock"); err != nil {
         t.Error(err)
         wrapper.Close()
@@ -95,6 +91,4 @@ func client(t *testing.T, done chan<- struct{}) {
 
     fmt.Println(string(b))
     wrapper.Close()
-
-    close(done)
 }
