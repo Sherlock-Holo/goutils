@@ -18,9 +18,18 @@ func NewWrapper(conn *websocket.Conn) *Wrapper {
 }
 
 func (w *Wrapper) Write(p []byte) (n int, err error) {
-	if err := w.conn.WriteMessage(websocket.BinaryMessage, p); err != nil {
+	if writer, err := w.conn.NextWriter(websocket.BinaryMessage); err != nil {
 		return 0, err
+	} else {
+		if _, err := writer.Write(p); err != nil {
+			return 0, err
+		}
+
+		if err := writer.Close(); err != nil {
+			return 0, err
+		}
 	}
+
 	return len(p), nil
 }
 
