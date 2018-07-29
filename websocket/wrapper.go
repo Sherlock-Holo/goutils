@@ -2,13 +2,15 @@ package websocket
 
 import (
 	"io"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
 
 type Wrapper struct {
-	r    io.Reader
-	conn *websocket.Conn
+	r          io.Reader
+	conn       *websocket.Conn
+	writeMutex sync.Mutex
 }
 
 func NewWrapper(conn *websocket.Conn) *Wrapper {
@@ -18,6 +20,9 @@ func NewWrapper(conn *websocket.Conn) *Wrapper {
 }
 
 func (w *Wrapper) Write(p []byte) (n int, err error) {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	if writer, err := w.conn.NextWriter(websocket.BinaryMessage); err != nil {
 		return 0, err
 	} else {
@@ -71,5 +76,8 @@ func (w *Wrapper) Close() error {
 }
 
 func (w *Wrapper) CloseWrite() error {
+	w.writeMutex.Lock()
+	defer w.writeMutex.Unlock()
+
 	return w.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 }
