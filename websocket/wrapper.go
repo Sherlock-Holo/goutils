@@ -23,16 +23,8 @@ func (w *Wrapper) Write(p []byte) (n int, err error) {
 	w.writeMutex.Lock()
 	defer w.writeMutex.Unlock()
 
-	if writer, err := w.conn.NextWriter(websocket.BinaryMessage); err != nil {
-		return 0, err
-	} else {
-		if _, err := writer.Write(p); err != nil {
-			return 0, err
-		}
-
-		if err := writer.Close(); err != nil {
-			return 0, err
-		}
+	if err = w.conn.WriteMessage(websocket.BinaryMessage, p); err != nil {
+		return
 	}
 
 	return len(p), nil
