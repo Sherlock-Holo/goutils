@@ -8,7 +8,7 @@ type Comparable interface {
 
 type innerSet []Comparable
 
-func (s innerSet) Len() int {
+/*func (s innerSet) Len() int {
 	return len(s)
 }
 
@@ -18,7 +18,7 @@ func (s innerSet) Less(i, j int) bool {
 
 func (s innerSet) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
-}
+}*/
 
 type SortedSet struct {
 	inner innerSet
@@ -31,11 +31,11 @@ func NewSortedSet() *SortedSet {
 }
 
 func (s *SortedSet) Search(x Comparable) (int, bool) {
-	index := sort.Search(s.inner.Len(), func(i int) bool {
+	index := sort.Search(len(s.inner), func(i int) bool {
 		return !s.inner[i].Less(x)
 	})
 
-	if index < s.inner.Len() && s.inner[index] == x {
+	if index < len(s.inner) && s.inner[index] == x {
 		return index, true
 	}
 
@@ -48,7 +48,10 @@ func (s *SortedSet) Add(x Comparable) bool {
 	}
 
 	s.inner = append(s.inner, x)
-	sort.Sort(s.inner)
+	// sort.Sort(s.inner)
+	sort.Slice(s.inner, func(i, j int) bool {
+		return s.inner[i].Less(s.inner[j])
+	})
 
 	return true
 }
@@ -67,7 +70,7 @@ func (s *SortedSet) List() []Comparable {
 }
 
 func (s *SortedSet) Get(index int) (Comparable, bool) {
-	if index >= s.inner.Len() {
+	if index >= len(s.inner) {
 		return nil, false
 	}
 
