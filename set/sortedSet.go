@@ -39,11 +39,11 @@ func (s *SortedSet) Search(x Comparable) (int, bool) {
 		return index, true
 	}
 
-	return 0, false
+	return index, false
 }
 
 func (s *SortedSet) Add(x Comparable) bool {
-	if _, ok := s.Search(x); ok {
+	/*if index, ok := s.Search(x); ok {
 		return false
 	}
 
@@ -52,6 +52,17 @@ func (s *SortedSet) Add(x Comparable) bool {
 	sort.Slice(s.inner, func(i, j int) bool {
 		return s.inner[i].Less(s.inner[j])
 	})
+
+	return true*/
+	index, ok := s.Search(x)
+	if ok {
+		return false
+	}
+
+	tmp := s.inner[index:]
+
+	s.inner = append(s.inner, x)
+	s.inner = append(s.inner, tmp...)
 
 	return true
 }
