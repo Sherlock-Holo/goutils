@@ -59,7 +59,7 @@ func (s *SortedSet) Add(x Comparable) bool {
 		return false
 	}
 
-	tmp := s.inner[index:]
+	tmp := s.inner[index-1:]
 
 	s.inner = append(s.inner, x)
 	s.inner = append(s.inner, tmp...)
