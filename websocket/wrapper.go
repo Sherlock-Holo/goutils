@@ -2,15 +2,41 @@ package websocket
 
 import (
 	"io"
+	"net"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 )
 
 type Wrapper struct {
 	r          io.Reader
 	conn       *websocket.Conn
 	writeMutex sync.Mutex
+}
+
+func (w *Wrapper) LocalAddr() net.Addr {
+	return w.conn.LocalAddr()
+}
+
+func (w *Wrapper) RemoteAddr() net.Addr {
+	return w.conn.RemoteAddr()
+}
+
+func (w *Wrapper) SetDeadline(t time.Time) error {
+	if err := w.SetReadDeadline(t); err != nil {
+		return err
+	}
+	return w.SetWriteDeadline(t)
+}
+
+func (w *Wrapper) SetReadDeadline(t time.Time) error {
+	return errors.WithStack(w.conn.SetReadDeadline(t))
+}
+
+func (w *Wrapper) SetWriteDeadline(t time.Time) error {
+	return errors.WithStack(w.conn.SetWriteDeadline(t))
 }
 
 func NewWrapper(conn *websocket.Conn) *Wrapper {
